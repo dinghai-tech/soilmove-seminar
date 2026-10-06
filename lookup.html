@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>查詢報名資料｜講習會線上報名</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2316282c'/><rect x='6' y='9' width='20' height='4' fill='%23c9a24f'/><rect x='6' y='15' width='20' height='4' fill='%23a8742a'/><rect x='6' y='21' width='20' height='4' fill='%236b4a31'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html">← 回活動首頁</a>
+  </div>
+</header>
+
+<main class="page-narrow">
+  <h1 style="font-size:clamp(1.7rem,1.3rem + 1.5vw,2.3rem);margin-bottom:12px">查詢報名資料</h1>
+  <p class="muted">輸入報名時填寫的 Email 與聯絡電話，即可確認報名序號與報名狀態。</p>
+  <div id="setup-note" class="setup-note hidden">網站尚未連接報名系統：請在 config.js 填入 Apps Script 網址。</div>
+
+  <form id="lookup-form" novalidate style="margin-top:28px">
+    <div class="field">
+      <label class="lbl req" for="email">報名 Email</label>
+      <input type="email" id="email" autocomplete="email" inputmode="email" maxlength="120" required>
+    </div>
+    <div class="field">
+      <label class="lbl req" for="phone">聯絡電話</label>
+      <input type="tel" id="phone" autocomplete="tel" inputmode="tel" maxlength="30" required>
+      <p class="hint">請輸入完整號碼，與報名時填寫的相同（有無連字號都可以）。</p>
+    </div>
+    <div id="lookup-msg" class="msg hidden" role="alert"></div>
+    <button type="submit" class="btn big" id="lookup-btn">查詢</button>
+  </form>
+
+  <div id="results" style="margin-top:32px" aria-live="polite"></div>
+
+  <section style="margin-top:56px;padding-top:28px;border-top:1px solid var(--line)" class="no-print">
+    <h2 style="font-size:1.25rem">忘記報名時的電話？</h2>
+    <p class="muted">輸入報名 Email，系統會把確認信重新寄到這個信箱。</p>
+    <form id="resend-form" novalidate>
+      <div class="field">
+        <label class="lbl req" for="resend-email">報名 Email</label>
+        <input type="email" id="resend-email" autocomplete="email" inputmode="email" maxlength="120" required>
+      </div>
+      <div id="resend-msg" class="msg hidden" role="status"></div>
+      <button type="submit" class="btn ghost" id="resend-btn">重寄確認信</button>
+    </form>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const { esc } = App;
+  if (!App.hasApi) $('setup-note').classList.remove('hidden');
+
+  $('lookup-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const box = $('lookup-msg');
+    box.classList.add('hidden');
+    $('results').innerHTML = '';
+    const email = $('email').value.trim(), phone = $('phone').value.trim();
+    if (!email || !phone) return App.msg(box, '請輸入 Email 與聯絡電話。');
+    const btn = $('lookup-btn');
+    btn.disabled = true; btn.textContent = '查詢中…';
+    try {
+      const r = await App.post({ action: 'lookup', email, phone });
+      if (!r.ok) return App.msg(box, r.error, r.code === 'NOT_FOUND' ? 'warn' : 'err');
+      $('results').innerHTML = r.items.map(it => {
+        const info = '<dl><dt>姓名</dt><dd>' + esc(it.name) + '</dd><dt>場次</dt><dd>' + esc(it.sessionName) + '</dd>' +
+          '<dt>日期</dt><dd>' + esc(it.dateText) + (it.time ? ' ' + esc(it.time) : '') + '</dd>' +
+          '<dt>地點</dt><dd>' + esc(it.venue) + (it.address ? '<br><span class="muted">' + esc(it.address) + '</span>' : '') + '</dd>' +
+          '<dt>狀態</dt><dd>' + esc(it.status) + '</dd></dl>';
+        const ok = it.status === '正取';
+        return '<div class="ticket waiting"><div><span class="muted">' + (ok ? '報名序號' : '候補序號') + '</span><div class="serial">' + esc(it.serial) + '</div>' + info +
+          '<p class="hint" style="margin-top:10px">' + (ok ? '活動當天請至報到處，於簽到表上簽名報到。' : '遞補成功後會寄信通知您。') + '</p></div></div>';
+      }).join('');
+    } catch (err) {
+      App.msg(box, err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '查詢';
+    }
+  });
+
+  $('resend-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const box = $('resend-msg');
+    const email = $('resend-email').value.trim();
+    if (!email) return App.msg(box, '請輸入 Email。');
+    const btn = $('resend-btn');
+    btn.disabled = true;
+    try {
+      const r = await App.post({ action: 'resend', email });
+      App.msg(box, r.ok ? r.message : r.error, r.ok ? 'ok' : 'err');
+    } catch (err) {
+      App.msg(box, err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>
