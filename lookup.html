@@ -41,7 +41,7 @@
 
   <section style="margin-top:56px;padding-top:28px;border-top:1px solid var(--line)" class="no-print">
     <h2 style="font-size:1.25rem">忘記報名時的電話？</h2>
-    <p class="muted">輸入報名 Email，系統會把確認信重新寄到這個信箱。</p>
+    <p class="muted">輸入報名 Email，系統會把確認信（已取消者為取消確認信）重新寄到這個信箱。</p>
     <form id="resend-form" novalidate>
       <div class="field">
         <label class="lbl req" for="resend-email">報名 Email</label>
@@ -77,10 +77,14 @@
         const info = '<dl><dt>姓名</dt><dd>' + esc(it.name) + '</dd><dt>場次</dt><dd>' + esc(it.sessionName) + '</dd>' +
           '<dt>日期</dt><dd>' + esc(it.dateText) + (it.time ? ' ' + esc(it.time) : '') + '</dd>' +
           '<dt>地點</dt><dd>' + esc(it.venue) + (it.address ? '<br><span class="muted">' + esc(it.address) + '</span>' : '') + '</dd>' +
-          '<dt>狀態</dt><dd>' + esc(it.status) + '</dd></dl>';
-        const ok = it.status === '正取';
-        return '<div class="ticket waiting"><div><span class="muted">' + (ok ? '報名序號' : '候補序號') + '</span><div class="serial">' + esc(it.serial) + '</div>' + info +
-          '<p class="hint" style="margin-top:10px">' + (ok ? '活動當天請至報到處，於簽到表上簽名報到。' : '遞補成功後會寄信通知您。') + '</p></div></div>';
+          '<dt>狀態</dt><dd>' + esc(it.status) + '</dd>' +
+          (it.cancelledAt ? '<dt>取消時間</dt><dd>' + esc(it.cancelledAt) + '</dd>' : '') + '</dl>';
+        const ok = it.status === '正取', cancelled = it.status === '取消';
+        const label = cancelled ? '報名序號（已取消）' : (ok ? '報名序號' : '候補序號');
+        const hint = cancelled ? '此筆報名已取消。如非您本人申請，請聯繫主辦單位；若仍想參加，可在報名截止前重新報名。'
+          : (ok ? '活動當天請至報到處，於簽到表上簽名報到。' : '遞補成功後會寄信通知您。');
+        return '<div class="ticket waiting' + (cancelled ? ' cancelled' : '') + '"><div><span class="muted">' + label + '</span><div class="serial">' + esc(it.serial) + '</div>' + info +
+          '<p class="hint" style="margin-top:10px">' + hint + '</p></div></div>';
       }).join('');
     } catch (err) {
       App.msg(box, err.message);
