@@ -31,5 +31,14 @@
     el.classList.remove('hidden');
   }
 
-  window.App = { hasApi: !!API_URL, get: p => call('GET', p), post: p => call('POST', p), esc, msg };
+  /** 報到 QR Code（SVG）；需先載入 vendor/qrcode.js。白底，深色模式下也掃得到 */
+  function qrSvg(text) {
+    if (!text || typeof window.qrcode !== 'function') return '';
+    const qr = window.qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 16, scalable: true, title: '報到 QR Code' });
+  }
+
+  window.App = { hasApi: !!API_URL, get: p => call('GET', p), post: p => call('POST', p), esc, msg, qrSvg };
 })();

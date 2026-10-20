@@ -164,9 +164,11 @@
     const info = '<dl><dt>場次</dt><dd>' + esc(r.sessionName) + '</dd><dt>日期</dt><dd>' + esc(r.dateText) + '</dd><dt>地點</dt><dd>' + esc(r.venue) + '</dd></dl>';
     $('result').innerHTML = ok
       ? '<div class="msg ok">報名成功！確認信已寄至 ' + esc(email) + '（如未收到，請檢查垃圾郵件匣）。</div>' +
-        '<div class="ticket waiting"><div><span class="muted">報名序號</span>' +
+        '<div class="ticket' + (r.qr ? '' : ' waiting') + '">' +
+        (r.qr ? '<div class="qr">' + App.qrSvg(r.qr) + '</div>' : '') +
+        '<div><span class="muted">報名序號</span>' +
         '<div class="serial">' + esc(r.serial) + '</div>' + info + '</div></div>' +
-        '<p class="hint">活動當天請至報到處，於簽到表上簽名報到。之後可以到「查詢報名資料」頁面確認報名狀態。</p>'
+        '<p class="hint">活動當天請於報到處出示這個 QR Code（確認信中也有）完成報到。忘記帶時，可到「查詢報名資料」頁面重新顯示，或提供報名序號。</p>'
       : '<div class="msg warn">正取名額已滿，您已登記為候補。有名額釋出時，系統會依序自動遞補並寄信通知您。</div>' +
         '<div class="ticket waiting"><div><span class="muted">候補序號</span><div class="serial">' + esc(r.serial) + '</div>' + info + '</div></div>';
     $('result').insertAdjacentHTML('beforeend', '<p><button type="button" class="btn ghost" id="again">再報名一位</button></p>');

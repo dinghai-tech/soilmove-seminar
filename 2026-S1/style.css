@@ -223,3 +223,37 @@ footer.foot p { margin: 0; color: color-mix(in srgb, var(--paper) 78%, transpare
   .top, .nav, footer.foot, .no-print { display: none !important; }
   body { background: #fff; }
 }
+
+/* V5：報到 QR Code（白底黑碼，深色模式也維持白底才掃得到） */
+.ticket .qr { background: #fff; border-radius: var(--radius); padding: 6px; line-height: 0; }
+.ticket .qr svg { display: block; width: 100%; height: auto; }
+@media (max-width: 560px) { .ticket .qr { width: min(240px, 100%); margin-inline: auto; } }
+
+/* V5：工作人員報到頁 */
+.ck-bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 8px 0 18px; }
+.ck-bar .field { margin: 0; flex: 1 1 220px; }
+.ck-count { font-family: var(--serif); font-size: 1.6rem; font-weight: 900; line-height: 1; white-space: nowrap; }
+.ck-count small { font-family: var(--sans); font-size: .85rem; font-weight: 400; color: var(--muted); }
+.ck-video { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; max-height: 52vh; width: 100%; }
+.ck-video video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ck-video .frame { position: absolute; inset: 18% 22%; border: 3px solid rgba(255,255,255,.85); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0,0,0,.28); pointer-events: none; }
+.ck-video .idle { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; text-align: center; padding: 20px; }
+.ck-result { border-radius: var(--radius); padding: 16px 18px; margin: 16px 0; border: 2px solid var(--line); background: var(--surface); }
+.ck-result h2 { font-size: 1.35rem; margin: 0 0 6px; }
+.ck-result .who { font-size: 1.5rem; font-weight: 700; }
+.ck-result .meta { color: var(--muted); }
+.ck-result.ok { border-color: var(--ok); background: var(--ok-bg); }
+.ck-result.ok h2 { color: var(--ok); }
+.ck-result.warn { border-color: var(--warn); background: var(--warn-bg); }
+.ck-result.warn h2 { color: var(--warn); }
+.ck-result.err { border-color: var(--bad); background: var(--bad-bg); }
+.ck-result.err h2 { color: var(--bad); }
+.ck-result .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.meal-veg { display: inline-block; background: var(--ok); color: var(--surface); font-weight: 700; padding: 1px 10px; border-radius: 99px; margin-left: 6px; }
+.ck-list { list-style: none; padding: 0; margin: 12px 0 0; }
+.ck-list li { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.ck-list .n { font-weight: 700; }
+.ck-list .s { color: var(--muted); font-size: .9rem; }
+.ck-list .done { color: var(--ok); font-weight: 700; font-size: .92rem; white-space: nowrap; }
+.btn.small { padding: 8px 16px; min-height: 40px; font-size: .95rem; }
+.linkbtn { background: none; border: 0; color: var(--action); font: inherit; font-size: .88rem; text-decoration: underline; cursor: pointer; padding: 4px 0; }
