@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>查詢報名資料｜講習會線上報名</title>
+<title>查詢／取消報名｜講習會線上報名</title>
 <meta name="robots" content="noindex">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2316282c'/><rect x='6' y='9' width='20' height='4' fill='%23c9a24f'/><rect x='6' y='15' width='20' height='4' fill='%23a8742a'/><rect x='6' y='21' width='20' height='4' fill='%236b4a31'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,8 +19,8 @@
 </header>
 
 <main class="page-narrow">
-  <h1 style="font-size:clamp(1.7rem,1.3rem + 1.5vw,2.3rem);margin-bottom:12px">查詢報名資料</h1>
-  <p class="muted">輸入報名時填寫的 Email 與聯絡電話，即可確認報名序號與報名狀態。</p>
+  <h1 style="font-size:clamp(1.7rem,1.3rem + 1.5vw,2.3rem);margin-bottom:12px">查詢／取消報名</h1>
+  <p class="muted">輸入報名時填寫的 Email 與聯絡電話，即可確認報名序號與報名狀態；不克出席時，也可以在這裡自行取消報名，讓名額釋出給候補者。</p>
   <div id="setup-note" class="setup-note hidden">網站尚未連接報名系統：請在 config.js 填入 Apps Script 網址。</div>
 
   <form id="lookup-form" novalidate style="margin-top:28px">
@@ -54,6 +54,7 @@
 </main>
 
 <script src="config.js"></script>
+<script src="vendor/qrcode.js"></script>
 <script src="common.js"></script>
 <script>
 (function () {
@@ -61,35 +62,87 @@
   const { esc } = App;
   if (!App.hasApi) $('setup-note').classList.remove('hidden');
 
-  $('lookup-form').addEventListener('submit', async e => {
+  let last = null; // 最近一次查詢成功的 Email／電話，取消報名時用來驗證身分
+
+  $('lookup-form').addEventListener('submit', e => {
     e.preventDefault();
+    const email = $('email').value.trim(), phone = $('phone').value.trim();
+    if (!email || !phone) { $('results').innerHTML = ''; return App.msg($('lookup-msg'), '請輸入 Email 與聯絡電話。'); }
+    lookup(email, phone);
+  });
+
+  async function lookup(email, phone, notice) {
     const box = $('lookup-msg');
     box.classList.add('hidden');
     $('results').innerHTML = '';
-    const email = $('email').value.trim(), phone = $('phone').value.trim();
-    if (!email || !phone) return App.msg(box, '請輸入 Email 與聯絡電話。');
     const btn = $('lookup-btn');
     btn.disabled = true; btn.textContent = '查詢中…';
     try {
       const r = await App.post({ action: 'lookup', email, phone });
       if (!r.ok) return App.msg(box, r.error, r.code === 'NOT_FOUND' ? 'warn' : 'err');
+      last = { email, phone };
+      if (notice) App.msg(box, notice, 'ok');
       $('results').innerHTML = r.items.map(it => {
         const info = '<dl><dt>姓名</dt><dd>' + esc(it.name) + '</dd><dt>場次</dt><dd>' + esc(it.sessionName) + '</dd>' +
           '<dt>日期</dt><dd>' + esc(it.dateText) + (it.time ? ' ' + esc(it.time) : '') + '</dd>' +
           '<dt>地點</dt><dd>' + esc(it.venue) + (it.address ? '<br><span class="muted">' + esc(it.address) + '</span>' : '') + '</dd>' +
           '<dt>狀態</dt><dd>' + esc(it.status) + '</dd>' +
-          (it.cancelledAt ? '<dt>取消時間</dt><dd>' + esc(it.cancelledAt) + '</dd>' : '') + '</dl>';
+          (it.cancelledAt ? '<dt>取消時間</dt><dd>' + esc(it.cancelledAt) + '</dd>' : '') +
+          (it.checkedInAt ? '<dt>報到時間</dt><dd>' + esc(it.checkedInAt) + '</dd>' : '') + '</dl>';
         const ok = it.status === '正取', cancelled = it.status === '取消';
         const label = cancelled ? '報名序號（已取消）' : (ok ? '報名序號' : '候補序號');
         const hint = cancelled ? '此筆報名已取消。如非您本人申請，請聯繫主辦單位；若仍想參加，可在報名截止前重新報名。'
-          : (ok ? '活動當天請至報到處，於簽到表上簽名報到。' : '遞補成功後會寄信通知您。');
-        return '<div class="ticket waiting' + (cancelled ? ' cancelled' : '') + '"><div><span class="muted">' + label + '</span><div class="serial">' + esc(it.serial) + '</div>' + info +
-          '<p class="hint" style="margin-top:10px">' + hint + '</p></div></div>';
+          : (it.checkedInAt ? '您已完成報到。'
+          : (ok ? '活動當天請於報到處出示這個 QR Code 完成報到；也可以提供報名序號。' : '遞補成功後會寄信通知您，並附上報到 QR Code。'));
+        const qr = ok && it.qr ? '<div class="qr">' + App.qrSvg(it.qr) + '</div>' : '';
+        const cancel = it.canCancel
+          ? '<div class="cancel-box" data-serial="' + esc(it.serial) + '">' +
+            '<button type="button" class="btn ghost danger" data-act="ask">取消這筆報名</button>' +
+            '<div class="confirm hidden" role="group" aria-label="確認取消報名">' +
+            '<p>確定要取消 <b>' + esc(it.sessionName) + '</b>（' + esc(it.dateText) + '）的報名嗎？' +
+            (ok ? '取消後名額會釋出給候補者，' : '取消後將失去候補順位，') + '此操作無法復原。</p>' +
+            '<button type="button" class="btn danger" data-act="yes">確定取消</button> ' +
+            '<button type="button" class="btn ghost" data-act="no">不要取消</button>' +
+            '<div class="msg hidden" role="alert"></div></div></div>'
+          : '';
+        return '<div class="ticket' + (qr ? '' : ' waiting') + (cancelled ? ' cancelled' : '') + '">' + qr +
+          '<div><span class="muted">' + label + '</span><div class="serial">' + esc(it.serial) + '</div>' + info +
+          '<p class="hint" style="margin-top:10px">' + hint + '</p>' + cancel + '</div></div>';
       }).join('');
     } catch (err) {
       App.msg(box, err.message);
     } finally {
       btn.disabled = false; btn.textContent = '查詢';
+    }
+  }
+
+  // 取消報名：先在頁面內確認（不使用瀏覽器對話框），再以查詢時的 Email＋電話送出
+  $('results').addEventListener('click', async e => {
+    const b = e.target.closest('button[data-act]');
+    if (!b) return;
+    const boxEl = b.closest('.cancel-box');
+    const confirmEl = boxEl.querySelector('.confirm');
+    const ask = boxEl.querySelector('[data-act="ask"]');
+    if (b.dataset.act === 'ask') { ask.classList.add('hidden'); confirmEl.classList.remove('hidden'); confirmEl.querySelector('[data-act="no"]').focus(); return; }
+    if (b.dataset.act === 'no') { confirmEl.classList.add('hidden'); ask.classList.remove('hidden'); ask.focus(); return; }
+    if (!last) return;
+    const m = confirmEl.querySelector('.msg');
+    confirmEl.querySelectorAll('button').forEach(x => { x.disabled = true; });
+    b.textContent = '取消中…';
+    try {
+      const r = await App.post({ action: 'cancel', email: last.email, phone: last.phone, serial: boxEl.dataset.serial });
+      if (!r.ok) {
+        App.msg(m, r.error, r.code === 'CANNOT_CANCEL' ? 'warn' : 'err');
+        confirmEl.querySelectorAll('button').forEach(x => { x.disabled = false; });
+        b.textContent = '確定取消';
+        return;
+      }
+      await lookup(last.email, last.phone, '已取消報名（' + r.serial + '），取消確認信已寄到您的信箱。如之後仍想參加，可在報名截止前重新報名。');
+      $('lookup-msg').scrollIntoView({ block: 'center' });
+    } catch (err) {
+      App.msg(m, err.message);
+      confirmEl.querySelectorAll('button').forEach(x => { x.disabled = false; });
+      b.textContent = '確定取消';
     }
   });
 

@@ -4,6 +4,64 @@
   const STATE_LABEL = { open: '報名中', waitlist: '正取已滿，可登記候補', full: '已額滿', closed: '已截止' };
   let data = null;
 
+  /* ---------- 單位名稱檢核（規則與後端 unitError_ 相同，後端會再檢查一次） ---------- */
+  const UNIT_BLOCK = /^(無|沒有|個人|自營|自僱|自雇|自由業|不詳|未知|測試|[0-9０-９]+|[A-Za-zＡ-Ｚａ-ｚ]+|[^0-9A-Za-z\u3400-\u9fff]+)$/;
+  const CJK = /[\u3400-\u9fff\uf900-\ufaff]/g;
+  const SHORT_MSG = '您填寫的名稱似乎過短，請確認是否已包含完整公司全銜';
+  const cjkCount = s => (String(s || '').match(CJK) || []).length;
+  const squash = s => String(s || '').replace(/[\s\u3000]+/g, '');
+  let unitRule = { personal: '個人報名' };
+  let unitTouched = false; // 離開過欄位後，才即時顯示紅色錯誤；輸入中只提示「過短」
+  let savedUnit = '';
+
+  function unitError(unit) {
+    const u = squash(unit);
+    if (!u || UNIT_BLOCK.test(u) || /^(.+?)\1+$/.test(u)) {
+      return '請填寫完整的單位名稱（不可填「無」「個人」「自營」、純數字、純英文、符號或重複文字）。個人或自由接案者請勾選「我是個人／自由接案者」。';
+    }
+    if (cjkCount(u) < 4) return '單位名稱至少需 4 個中文字，請填寫完整公司全銜（請勿填寫簡稱）。';
+    return '';
+  }
+
+  function unitNote(kind, text) {
+    const el = $('unit-check');
+    if (!kind) { el.classList.add('hidden'); $('unit').removeAttribute('aria-invalid'); return; }
+    el.className = 'field-note ' + kind;
+    el.textContent = text;
+    if (kind === 'err') $('unit').setAttribute('aria-invalid', 'true'); else $('unit').removeAttribute('aria-invalid');
+  }
+
+  /** 回傳是否合格；輸入中（keyup）字數 < 4 顯示黃色警示，離開欄位（blur）後顯示完整檢核結果 */
+  function checkUnit(strict) {
+    if ($('individual').checked) { unitNote(); return true; }
+    const u = squash($('unit').value);
+    if (!u) { unitNote(); return false; }
+    const err = unitError($('unit').value);
+    if (u.length < 4) { unitNote('warn', SHORT_MSG); return false; }
+    if (err && (strict || unitTouched)) { unitNote('err', err); return false; }
+    unitNote();
+    return !err;
+  }
+
+  function setIndividual(on) {
+    const unit = $('unit');
+    if (on) {
+      if (unit.value !== unitRule.personal) savedUnit = unit.value;
+      unit.value = unitRule.personal;
+    } else if (unit.value === unitRule.personal) {
+      unit.value = savedUnit;
+    }
+    unit.readOnly = on;
+    unit.classList.toggle('locked', on);
+    unit.setAttribute('aria-readonly', String(on));
+    unitNote();
+  }
+
+  $('unit').addEventListener('keyup', () => checkUnit(false));
+  $('unit').addEventListener('input', () => checkUnit(false));
+  $('unit').addEventListener('blur', () => { if (squash($('unit').value)) { unitTouched = true; checkUnit(true); } });
+  $('individual').addEventListener('change', e => { setIndividual(e.target.checked); if (!e.target.checked) $('unit').focus(); });
+
   async function load() {
     if (!App.hasApi) { $('setup-note').classList.remove('hidden'); $('cores').innerHTML = ''; return; }
     try {
@@ -19,6 +77,9 @@
     renderSpeakers(data.speakers);
     renderForm(data);
     renderFaq(data.faq);
+    const fb = data.sessions.some(s => s.feedbackOpen);
+    $('nav-feedback').classList.toggle('hidden', !fb);
+    $('foot-feedback').classList.toggle('hidden', !fb);
   }
 
   function renderSite(s) {
@@ -32,13 +93,15 @@
     $('hero-fee').textContent = s.fee || '';
     $('purpose').innerHTML = String(s.purpose || '').split(/\n+/).map(p => '<p>' + esc(p) + '</p>').join('');
     $('privacy').textContent = s.privacy || '';
+    if (s.unitPersonal) unitRule.personal = s.unitPersonal;
     $('foot').innerHTML =
       '<div><h3>報名諮詢</h3><p>' + esc(s.contactName) + '</p>' +
       (s.contactPhone ? '<p>電話 <a href="tel:' + esc(s.contactPhone.replace(/[^\d+#]/g, '')) + '">' + esc(s.contactPhone) + '</a></p>' : '') +
       (s.contactEmail ? '<p>信箱 <a href="mailto:' + esc(s.contactEmail) + '">' + esc(s.contactEmail) + '</a></p>' : '') +
       (s.serviceHours ? '<p>服務時間 ' + esc(s.serviceHours) + '</p>' : '') + '</div>' +
       '<div><h3>主辦</h3><p>' + esc(s.host) + '</p>' + (s.coHost ? '<p>協辦：' + esc(s.coHost) + '</p>' : '') + '</div>' +
-      '<div><h3>已經報名了？</h3><p><a href="lookup.html">查詢報名資料</a></p></div>';
+      '<div><h3>已經報名了？</h3><p><a href="lookup.html">查詢或取消報名</a></p>' +
+      '<p class="hidden" id="foot-feedback"><a href="feedback.html">填寫回饋問卷</a></p></div>';
   }
 
   function renderCores(sessions) {
@@ -124,7 +187,8 @@
     const p = {
       action: 'register',
       session: val('session'), orgType: val('orgType'), meal: val('meal'),
-      unit: $('unit').value, name: $('name').value, title: $('title').value,
+      unit: $('individual').checked ? unitRule.personal : $('unit').value, individual: $('individual').checked,
+      name: $('name').value, title: $('title').value,
       email: $('email').value.trim(), phone: $('phone').value.trim(), note: $('note').value,
       website: $('website').value, consent: $('consent').checked
     };
@@ -138,6 +202,16 @@
     if (!p.phone) missing.push('聯絡電話');
     if (!p.meal) missing.push('餐飲需求');
     if (missing.length) return App.msg(box, '請填寫：' + missing.join('、') + '。');
+    if (!p.individual) {
+      const ue = unitError(p.unit);
+      if (ue) {
+        unitTouched = true;
+        unitNote('err', ue);
+        App.msg(box, '單位名稱：' + ue);
+        $('unit').focus();
+        return;
+      }
+    }
     if (!p.consent) return App.msg(box, '請先閱讀並勾選同意個人資料蒐集告知事項。');
 
     const btn = $('submit-btn');
@@ -148,6 +222,7 @@
         App.msg(box, r.error || '報名未完成，請再試一次。', r.code === 'DUPLICATE' ? 'warn' : 'err');
         if (r.code === 'DUPLICATE') box.insertAdjacentHTML('beforeend', ' <a href="lookup.html">前往查詢</a>');
         if (r.code === 'FULL' || r.code === 'CLOSED') load();
+        if (r.code === 'BAD_UNIT') { unitTouched = true; unitNote('err', r.error); $('unit').focus(); }
         return;
       }
       showResult(r, p.email);
@@ -164,9 +239,11 @@
     const info = '<dl><dt>場次</dt><dd>' + esc(r.sessionName) + '</dd><dt>日期</dt><dd>' + esc(r.dateText) + '</dd><dt>地點</dt><dd>' + esc(r.venue) + '</dd></dl>';
     $('result').innerHTML = ok
       ? '<div class="msg ok">報名成功！確認信已寄至 ' + esc(email) + '（如未收到，請檢查垃圾郵件匣）。</div>' +
-        '<div class="ticket waiting"><div><span class="muted">報名序號</span>' +
+        '<div class="ticket' + (r.qr ? '' : ' waiting') + '">' +
+        (r.qr ? '<div class="qr">' + App.qrSvg(r.qr) + '</div>' : '') +
+        '<div><span class="muted">報名序號</span>' +
         '<div class="serial">' + esc(r.serial) + '</div>' + info + '</div></div>' +
-        '<p class="hint">活動當天請至報到處，於簽到表上簽名報到。之後可以到「查詢報名資料」頁面確認報名狀態。</p>'
+        '<p class="hint">活動當天請於報到處出示這個 QR Code（確認信中也有）完成報到。忘記帶時，可到「查詢報名資料」頁面重新顯示，或提供報名序號。</p>'
       : '<div class="msg warn">正取名額已滿，您已登記為候補。有名額釋出時，系統會依序自動遞補並寄信通知您。</div>' +
         '<div class="ticket waiting"><div><span class="muted">候補序號</span><div class="serial">' + esc(r.serial) + '</div>' + info + '</div></div>';
     $('result').insertAdjacentHTML('beforeend', '<p><button type="button" class="btn ghost" id="again">再報名一位</button></p>');
@@ -175,8 +252,11 @@
     $('result').focus();
     $('again').onclick = () => {
       // 同單位的同事接著報名：保留機關類別與單位名稱
-      const keep = { org: val('orgType'), unit: $('unit').value };
+      const keep = { org: val('orgType'), unit: $('unit').value, individual: $('individual').checked, saved: savedUnit };
       $('reg-form').reset();
+      $('individual').checked = keep.individual;
+      savedUnit = keep.saved;
+      setIndividual(keep.individual);
       $('unit').value = keep.unit;
       const org = document.querySelector('[name="orgType"][value="' + CSS.escape(keep.org) + '"]');
       if (org) org.checked = true;

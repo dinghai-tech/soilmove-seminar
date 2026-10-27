@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>報到作業｜講習會線上報名</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2316282c'/><rect x='6' y='9' width='20' height='4' fill='%23c9a24f'/><rect x='6' y='15' width='20' height='4' fill='%23a8742a'/><rect x='6' y='21' width='20' height='4' fill='%236b4a31'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <span class="brand">報到作業（工作人員）</span>
+    <button type="button" class="linkbtn hidden" id="logout" style="margin-left:auto">登出</button>
+  </div>
+</header>
+
+<main class="page-narrow" style="padding-top:28px">
+  <div id="setup-note" class="setup-note hidden">網站尚未連接報名系統：請在 config.js 填入 Apps Script 網址。</div>
+
+  <!-- 登入 -->
+  <form id="login" novalidate>
+    <h1 style="font-size:1.8rem;margin-bottom:10px">報到作業</h1>
+    <p class="muted">請輸入主辦單位提供的報到通行碼。本頁僅供現場工作人員使用。</p>
+    <div class="field">
+      <label class="lbl req" for="passcode">報到通行碼</label>
+      <input type="password" id="passcode" autocomplete="current-password" maxlength="100" required>
+    </div>
+    <div id="login-msg" class="msg hidden" role="alert"></div>
+    <button type="submit" class="btn big" id="login-btn">登入</button>
+  </form>
+
+  <!-- 報到 -->
+  <section id="desk" class="hidden">
+    <p class="muted" id="event-title" style="margin:0 0 4px"></p>
+    <div class="ck-bar">
+      <div class="field">
+        <label class="lbl" for="session">報到場次</label>
+        <select id="session"></select>
+      </div>
+      <div class="ck-count" id="count" aria-live="polite"></div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" id="tab-scan" aria-selected="true">掃描 QR Code</button>
+      <button type="button" role="tab" id="tab-find" aria-selected="false">搜尋姓名／單位／序號</button>
+    </div>
+
+    <div id="result" aria-live="assertive"></div>
+
+    <div id="pane-scan">
+      <div class="ck-video">
+        <video id="video" playsinline muted></video>
+        <div class="frame hidden" id="frame"></div>
+        <div class="idle" id="idle">
+          <div>
+            <p style="margin-bottom:14px">請報到者出示確認信或提醒信中的 QR Code</p>
+            <button type="button" class="btn" id="start-cam">開啟相機掃描</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">手機請允許相機權限。掃到後會自動報到並顯示結果；同一張 QR Code 4 秒內不重複處理。</p>
+      <canvas id="canvas" hidden></canvas>
+    </div>
+
+    <div id="pane-find" class="hidden">
+      <form id="find" novalidate class="ck-bar" style="margin-top:0">
+        <div class="field">
+          <label class="lbl" for="q">姓名、單位或報名序號</label>
+          <input type="text" id="q" maxlength="50" autocomplete="off" placeholder="例如：王大明、○○營造、TPE-012">
+        </div>
+        <button type="submit" class="btn" id="find-btn">搜尋</button>
+      </form>
+      <p class="hint" id="find-hint">留空搜尋會列出本場次全部報名者（最多 50 筆）。</p>
+      <ul class="ck-list" id="list"></ul>
+    </div>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="checkin.js"></script>
+</body>
+</html>
