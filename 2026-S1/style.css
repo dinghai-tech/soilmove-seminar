@@ -257,3 +257,34 @@ footer.foot p { margin: 0; color: color-mix(in srgb, var(--paper) 78%, transpare
 .ck-list .done { color: var(--ok); font-weight: 700; font-size: .92rem; white-space: nowrap; }
 .btn.small { padding: 8px 16px; min-height: 40px; font-size: .95rem; }
 .linkbtn { background: none; border: 0; color: var(--action); font: inherit; font-size: .88rem; text-decoration: underline; cursor: pointer; padding: 4px 0; }
+
+/* ---------- 單位名稱檢核 ---------- */
+.field-note { font-size: .88rem; line-height: 1.55; margin: 6px 0 0; padding: 6px 10px; border-radius: var(--radius); }
+.field-note.warn { background: var(--warn-bg); color: var(--warn); }
+.field-note.err { background: var(--bad-bg); color: var(--bad); }
+input[aria-invalid="true"] { border-color: var(--bad); }
+input.locked { background: var(--paper); color: var(--muted); cursor: not-allowed; }
+.check.small { font-weight: 400; font-size: .95rem; margin-top: 8px; }
+.check.small input { width: 18px; height: 18px; margin-top: 5px; }
+
+/* ---------- 查詢頁：取消報名 ---------- */
+.cancel-box { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.cancel-box .confirm p { margin-bottom: 10px; }
+.btn.danger { background: var(--bad); color: var(--surface); border: 1px solid var(--bad); }
+.btn.ghost.danger { background: transparent; color: var(--bad); border-color: var(--bad); }
+@media print { .cancel-box { display: none; } }
+
+/* ---------- 回饋問卷 ---------- */
+.fb-q { margin-bottom: 26px; padding: 4px 0 0; border-radius: var(--radius); }
+.fb-q legend, .fb-q .lbl { line-height: 1.6; }
+.fb-n { display: inline-block; min-width: 1.8em; font-family: var(--serif); font-weight: 900; color: var(--ochre); }
+.fb-q.missing legend, .fb-q.missing .lbl { color: var(--bad); }
+.fb-q.missing textarea { border-color: var(--bad); }
+.scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.scale .choice { padding: 10px 8px; justify-content: center; align-items: center; text-align: center; font-size: .95rem; }
+.scale .choice input { margin-top: 0; }
+.fb-fixed { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; }
+@media (max-width: 620px) {
+  .scale { grid-template-columns: 1fr; gap: 6px; }
+  .scale .choice { justify-content: flex-start; padding: 10px 14px; }
+}

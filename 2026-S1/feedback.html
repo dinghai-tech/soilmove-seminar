@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>回饋問卷｜講習會線上報名</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2316282c'/><rect x='6' y='9' width='20' height='4' fill='%23c9a24f'/><rect x='6' y='15' width='20' height='4' fill='%23a8742a'/><rect x='6' y='21' width='20' height='4' fill='%236b4a31'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="index.html">← 回活動首頁</a>
+  </div>
+</header>
+
+<main class="page-narrow">
+  <h1 id="fb-title" style="font-size:clamp(1.6rem,1.25rem + 1.4vw,2.2rem);margin-bottom:12px">回饋問卷</h1>
+  <p class="muted" id="fb-intro"></p>
+  <div id="setup-note" class="setup-note hidden">網站尚未連接報名系統：請在 config.js 填入 Apps Script 網址。</div>
+  <div id="load-msg" class="msg hidden" role="alert"></div>
+
+  <form id="fb-form" class="hidden" novalidate style="margin-top:28px">
+    <fieldset id="fb-session-set">
+      <legend class="req">您參加的場次</legend>
+      <div class="choices" id="fb-sessions"></div>
+    </fieldset>
+    <p id="fb-fixed" class="fb-fixed hidden"></p>
+
+    <div id="fb-questions"></div>
+
+    <div class="trap" aria-hidden="true">
+      <label for="website">網站（請留空）</label>
+      <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div id="fb-msg" class="msg hidden" role="alert"></div>
+    <button type="submit" class="btn big" id="fb-btn">送出問卷</button>
+    <p class="hint" style="margin-top:12px">問卷不記錄姓名、Email 或電話，僅供主辦單位統計與改進講習會使用。</p>
+  </form>
+
+  <div id="fb-done" class="hidden" tabindex="-1"></div>
+</main>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script src="feedback.js"></script>
+</body>
+</html>
