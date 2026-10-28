@@ -21,8 +21,8 @@
     if (form.submitted) return done('您已填寫過這份回饋問卷，感謝您的協助！');
     const fixed = form.fixedSession && form.sessions.find(s => s.code === form.fixedSession);
     const open = form.sessions.filter(s => s.open);
-    if (fixed && !fixed.open) return App.msg($('load-msg'), fixed.name + '目前未開放填寫回饋問卷（活動當天起 ' + form.days + ' 天內開放）。', 'warn');
-    if (!fixed && !open.length) return App.msg($('load-msg'), '目前沒有開放填寫回饋問卷的場次。問卷於各場次活動當天起開放 ' + form.days + ' 天。', 'warn');
+    if (fixed && !fixed.open) return App.msg($('load-msg'), fixed.name + '的回饋問卷只在活動當天（' + fixed.dateText + '）開放填寫，目前無法填寫。', 'warn');
+    if (!fixed && !open.length) return App.msg($('load-msg'), '目前沒有開放填寫回饋問卷的場次。回饋問卷只在各場次活動當天開放填寫。', 'warn');
     if (form.keyError) App.msg($('load-msg'), form.keyError, 'warn');
 
     if (fixed) {
