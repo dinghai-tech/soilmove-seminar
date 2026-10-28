@@ -1,9 +1,11 @@
-/* 回饋問卷頁：題目由後端提供（與 Google 表單相同）；邀請信連結帶 ?k= 時自動鎖定場次、每人限填一次 */
+/* 回饋問卷頁：題目由後端提供（與 Google 表單相同）。
+   僅限報名學員：邀請信連結帶 ?k=；從網站進入時先以 Email＋電話驗證取得 k。每人限填一次。 */
 (function () {
   const $ = id => document.getElementById(id);
   const { esc } = App;
   const key = new URLSearchParams(location.search).get('k') || '';
   const preset = (new URLSearchParams(location.search).get('s') || '').toUpperCase();
+  const via = new URLSearchParams(location.search).get('v') === 'web' ? 'web' : '';
   let form = null;
 
   async function load() {
@@ -22,19 +24,16 @@
     const fixed = form.fixedSession && form.sessions.find(s => s.code === form.fixedSession);
     const open = form.sessions.filter(s => s.open);
     if (fixed && !fixed.open) return App.msg($('load-msg'), fixed.name + '的回饋問卷只在活動當天（' + fixed.dateText + '）開放填寫，目前無法填寫。', 'warn');
-    if (!fixed && !open.length) return App.msg($('load-msg'), '目前沒有開放填寫回饋問卷的場次。回饋問卷只在各場次活動當天開放填寫。', 'warn');
-    if (form.keyError) App.msg($('load-msg'), form.keyError, 'warn');
-
-    if (fixed) {
-      $('fb-session-set').classList.add('hidden');
-      $('fb-fixed').innerHTML = '場次：<b>' + esc(fixed.name) + '</b>　' + esc(fixed.dateText);
-      $('fb-fixed').classList.remove('hidden');
-    } else {
-      $('fb-sessions').innerHTML = open.map(s =>
-        '<label class="choice"><input type="radio" name="session" value="' + esc(s.code) + '"' +
-        (open.length === 1 || s.code === preset ? ' checked' : '') + '>' +
-        '<span><strong>' + esc(s.name) + '</strong>　' + esc(s.dateText) + '</span></label>').join('');
+    if (!fixed) {
+      if (!open.length) return App.msg($('load-msg'), '目前沒有開放填寫回饋問卷的場次。回饋問卷只在各場次活動當天開放填寫。', 'warn');
+      // 沒有有效的問卷代碼：先驗證報名身分，不顯示題目
+      if (form.keyError) App.msg($('load-msg'), form.keyError, 'warn');
+      $('fb-verify').classList.remove('hidden');
+      return;
     }
+
+    $('fb-fixed').innerHTML = '場次：<b>' + esc(fixed.name) + '</b>　' + esc(fixed.dateText);
+    $('fb-fixed').classList.remove('hidden');
 
     $('fb-questions').innerHTML = form.questions.map((q, i) => {
       const n = i + 1;
@@ -62,8 +61,6 @@
       answers[q.id] = q.type === 'text' ? $(q.id).value.trim() : val(q.id);
       if (!answers[q.id]) missing.push(i + 1);
     });
-    const session = form.fixedSession || val('session');
-    if (!session) return App.msg(box, '請選擇您參加的場次。');
     if (missing.length) {
       missing.forEach(n => { const q = form.questions[n - 1]; ($('set-' + q.id) || $(q.id).closest('.fb-q')).classList.add('missing'); });
       App.msg(box, '請回答第 ' + missing.join('、') + ' 題。');
@@ -74,7 +71,7 @@
     const btn = $('fb-btn');
     btn.disabled = true; btn.textContent = '送出中…';
     try {
-      const r = await App.post({ action: 'feedback', session, k: key, answers, website: $('website').value });
+      const r = await App.post({ action: 'feedback', k: key, via, answers, website: $('website').value });
       if (!r.ok) {
         if (r.code === 'FB_DONE') return done(r.error);
         return App.msg(box, r.error);
@@ -84,6 +81,26 @@
       App.msg(box, err.message);
     } finally {
       btn.disabled = false; btn.textContent = '送出問卷';
+    }
+  });
+
+  // 從網站進入：Email＋電話驗證通過後，帶問卷代碼重新載入（之後與邀請信流程相同）
+  $('fb-verify').addEventListener('submit', async e => {
+    e.preventDefault();
+    const box = $('v-msg');
+    box.classList.add('hidden');
+    const email = $('v-email').value.trim(), phone = $('v-phone').value.trim();
+    if (!email || !phone) return App.msg(box, '請輸入 Email 與聯絡電話。');
+    const btn = $('v-btn');
+    btn.disabled = true; btn.textContent = '確認中…';
+    try {
+      const r = await App.post({ action: 'feedbackVerify', email, phone, session: preset });
+      if (!r.ok) return App.msg(box, r.error, r.code === 'FB_CLOSED' ? 'warn' : 'err');
+      location.replace('feedback.html?k=' + encodeURIComponent(r.k) + '&v=web');
+    } catch (err) {
+      App.msg(box, err.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '確認身分並填寫問卷';
     }
   });
 

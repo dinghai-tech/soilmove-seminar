@@ -24,11 +24,22 @@
   <div id="setup-note" class="setup-note hidden">網站尚未連接報名系統：請在 config.js 填入 Apps Script 網址。</div>
   <div id="load-msg" class="msg hidden" role="alert"></div>
 
+  <form id="fb-verify" class="hidden" novalidate style="margin-top:28px">
+    <p>回饋問卷僅限報名本講習會的學員填寫。請輸入報名時填寫的 Email 與聯絡電話確認身分。</p>
+    <div class="field">
+      <label class="lbl req" for="v-email">Email</label>
+      <input type="email" id="v-email" autocomplete="email" inputmode="email" required>
+    </div>
+    <div class="field">
+      <label class="lbl req" for="v-phone">聯絡電話</label>
+      <input type="tel" id="v-phone" autocomplete="tel" inputmode="tel" required>
+    </div>
+    <div id="v-msg" class="msg hidden" role="alert"></div>
+    <button type="submit" class="btn big" id="v-btn">確認身分並填寫問卷</button>
+    <p class="hint" style="margin-top:12px">Email 與電話只用來確認您有報名，不會與問卷答案一起儲存。</p>
+  </form>
+
   <form id="fb-form" class="hidden" novalidate style="margin-top:28px">
-    <fieldset id="fb-session-set">
-      <legend class="req">您參加的場次</legend>
-      <div class="choices" id="fb-sessions"></div>
-    </fieldset>
     <p id="fb-fixed" class="fb-fixed hidden"></p>
 
     <div id="fb-questions"></div>
